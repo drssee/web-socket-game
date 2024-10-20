@@ -1,0 +1,95 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background-color: #f0f0f0;
+    font-family: Arial, sans-serif;
+}
+
+.container {
+    display: flex;
+    justify-content: space-between;
+    width: 80vw;
+}
+
+.board {
+    display: grid;
+    grid-template-columns: repeat(5, 100px); /* 가로 5칸 */
+    grid-template-rows: repeat(5, 100px);    /* 세로 5칸 */
+    gap: 2px; /* 각 칸 사이의 간격 */
+    border: 2px solid #333;
+}
+
+.cell {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #ffcc00;
+    border: 1px solid #333;
+    font-size: 18px;
+    font-weight: bold;
+    color: #333;
+    position: relative; /* 플레이어의 말을 배치하기 위해 */
+}
+
+.player-info {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    margin-bottom: 20px;
+}
+
+.player {
+    margin-bottom: 20px;
+}
+
+.player1-piece, .player2-piece {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    position: absolute;
+}
+
+.player1-piece {
+    background-color: red;
+    top: 5px;
+    left: 5px;
+}
+
+.player2-piece {
+    background-color: blue;
+    bottom: 5px;
+    right: 5px;
+}
+
+.game-info {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-left: 20px;
+}
+
+.dice-section {
+    margin-top: 20px;
+}
+
+button {
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+/* 가운데 3x3 칸 숨기기 */
+.cell:nth-child(7), .cell:nth-child(8), .cell:nth-child(9),
+.cell:nth-child(12), .cell:nth-child(13), .cell:nth-child(14),
+.cell:nth-child(17), .cell:nth-child(18), .cell:nth-child(19) {
+    visibility: hidden; /* 해당 칸을 보이지 않게 설정 */
+}

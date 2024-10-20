@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>브루마블 게임판</title>
+    <link rel="stylesheet" href="css/game.css">
+</head>
+<body>
+<div class="container">
+    <div class="board">
+        <!-- 게임판 -->
+        <div id="cell5" class="cell">5</div>
+        <div id="cell6" class="cell">6</div>
+        <div id="cell7" class="cell">7</div>
+        <div id="cell8" class="cell">8</div>
+        <div id="cell9" class="cell">9</div>
+        <div id="cell4" class="cell">4</div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div id="cell10" class="cell">10</div>
+        <div id="cell3" class="cell">3</div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div id="cell11" class="cell">11</div>
+        <div id="cell2" class="cell">2</div>
+        <div id="cell17" class="cell">17</div>
+        <div id="cell18" class="cell">18</div>
+        <div id="cell19" class="cell">19</div>
+        <div id="cell12" class="cell">12</div>
+        <div id="cell1" class="cell">1</div>
+        <div id="cell16" class="cell">16</div>
+        <div id="cell15" class="cell">15</div>
+        <div id="cell14" class="cell">14</div>
+        <div id="cell13" class="cell">13</div>
+    </div>
+
+    <!-- 플레이어 정보와 주사위 굴리기 -->
+    <div class="game-info">
+        <div class="player-info">
+            <div class="player">
+                <h3 id="player-id"></h3>
+                <p>money: <span id="player-money">0</span></p>
+            </div>
+        </div>
+
+        <div class="ready-section">
+            <button id="ready-button">준비</button>
+        </div>
+
+        <!-- 주사위 굴리기 -->
+        <div class="dice-section">
+            <button id="roll-dice-button">주사위</button>
+            <p>roll: <span id="dice-result">-</span></p>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+    import game from './js/vanilaGame.js';
+
+    window.onload = function () {
+        const player1Piece = document.createElement('div'); // 플레이어1 말
+        player1Piece.classList.add('player1-piece');
+        document.getElementById('cell1').appendChild(player1Piece);
+        const player2Piece = document.createElement('div'); // 플레이어2 말
+        player2Piece.classList.add('player2-piece');
+        document.getElementById('cell1').appendChild(player2Piece);
+
+        const readyButton = document.getElementById('ready-button');
+        const rollDiceButton = document.getElementById('roll-dice-button');
+
+        game.connect();
+        readyButton.addEventListener('click', game.ready);
+        rollDiceButton.addEventListener('click', game.roll);
+    }
+</script>
+</body>
+</html>
