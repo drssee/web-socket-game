@@ -21,6 +21,7 @@ public class SimpleGameServiceImpl implements GameService {
         this.initBoard(BASIC_BOARD_SIZE);
     }
 
+    // TODO 예외 모아서 따로 응답 하도록 처리해야함
     private void validate(Player player) {
         if (player == null) throw new RuntimeException("player is null");
     }
@@ -74,7 +75,7 @@ public class SimpleGameServiceImpl implements GameService {
     }
 
     @Override
-    public boolean ready(String playerId) {
+    public boolean setReady(String playerId) {
         Player player = players.get(playerId);
         if (player == null) return false;
         player.setReady(true);
@@ -91,15 +92,28 @@ public class SimpleGameServiceImpl implements GameService {
     }
 
     @Override
-    public GameResponse handle(String playerId, int boardNum) {
+    public GameResponse process(String playerId, int prevBoardNum, int roll) {
         Player player = players.get(playerId);
-        Board board = boards.get(boardNum);
-        validate(player, board);
+        Board prevBoard = boards.get(prevBoardNum);
+        validate(player, prevBoard);
+
+        int rolledNum = prevBoardNum + roll;
+        Board nextBoard = boards.get(
+                rolledNum > BASIC_BOARD_SIZE ? rolledNum - BASIC_BOARD_SIZE : rolledNum
+        );
+        validate(nextBoard);
+
+        // TODO 1. 테스트 코드 수정(이전 위치, 새로운 위치 추가됨 + 응답에 boards 추가됨)
+        // TODO 2. roll+render 와 연계하여 테스트 해야함
+        // 이전 board 에서 플레이어 제거 + 새로운 board 에 플레이어 추가
+        prevBoard.getOnPlayers().remove(player);
+        nextBoard.getOnPlayers().add(player);
+
         GameResponse gameResponse = new GameResponse();
 
         // 플레이어가 소유주일때
-        if (board.getOwner() != null
-                && board.getOwner().getId().equals(player.getId())) {
+        if (nextBoard.getOwner() != null
+                && nextBoard.getOwner().getId().equals(player.getId())) {
 
             // TODO 추가 기능 필요할 경우 추가
         }
@@ -107,23 +121,26 @@ public class SimpleGameServiceImpl implements GameService {
         // 플레이어가 소유주가 아닐때
         else {
             // 주인이 없는 땅이면
-            if (board.getOwner() == null) {
-                // TODO 웹소켓과 연계해서 구매 선택여부 알아야함
+            if (nextBoard.getOwner() == null) {
+                // TODO 웹소켓과 연계해서 구매 선택여부 알아야함 + 테스트 구현
             }
             // 주인이 있는 땅이면
             else {
-                if (isGameOver(playerId, boardNum)) player.setGameOver(true);
-                player.setMoney(player.getMoney() - board.getPrice());
+                if (isGameOver(playerId, nextBoard.getId())) {
+                    gameResponse.setGameOver(true);
+                    gameResponse.setGameOverId(playerId);
+                }
+                player.setMoney(player.getMoney() - nextBoard.getPrice());
                 gameResponse.setPlayer(player);
-                gameResponse.setBoard(boards.get(boardNum-1));
             }
         }
 
+        gameResponse.setBoards(boards);
         return gameResponse;
     }
 
     @Override
-    public int roll(String playerId) {
+    public int setRoll(String playerId) {
         int roll = (int) (Math.random() * 6) + 1;
         Player player = players.get(playerId);
         player.setRoll(roll);
@@ -143,7 +160,6 @@ public class SimpleGameServiceImpl implements GameService {
                 && board.getOwner() != player
                 && player.getMoney() < needMoney) {
 
-            player.setGameOver(true);
             return true;
         }
         return false;

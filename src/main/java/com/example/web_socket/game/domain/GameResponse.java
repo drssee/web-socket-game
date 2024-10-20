@@ -3,27 +3,19 @@ package com.example.web_socket.game.domain;
 import com.example.web_socket.game.domain.enums.GameMenu;
 import com.example.web_socket.game.domain.enums.GameStatus;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 public class GameResponse {
 
-    private Board board;
     private Player player;
-    private List<Board> boards = new ArrayList<>();
+    private Map<Integer, Board> boards = new HashMap<>();
 
-    private int data;
     private String message;
     private GameStatus status;
     private GameMenu menu;
-
-    public Board getBoard() {
-        return board;
-    }
-
-    public void setBoard(Board board) {
-        this.board = board;
-    }
+    private boolean gameOver;
+    private String gameOverId;
 
     public Player getPlayer() {
         return player;
@@ -33,20 +25,12 @@ public class GameResponse {
         this.player = player;
     }
 
-    public List<Board> getBoards() {
+    public Map<Integer, Board> getBoards() {
         return boards;
     }
 
-    public void setBoards(List<Board> boards) {
+    public void setBoards(Map<Integer, Board> boards) {
         this.boards = boards;
-    }
-
-    public int getData() {
-        return data;
-    }
-
-    public void setData(int data) {
-        this.data = data;
     }
 
     public String getMessage() {
@@ -71,5 +55,21 @@ public class GameResponse {
 
     public void setMenu(GameMenu menu) {
         this.menu = menu;
+    }
+
+    public boolean isGameOver() {
+        return gameOver;
+    }
+
+    public void setGameOver(boolean gameOver) {
+        this.gameOver = gameOver;
+    }
+
+    public String getGameOverId() {
+        return gameOverId;
+    }
+
+    public void setGameOverId(String gameOverId) {
+        this.gameOverId = gameOverId;
     }
 }

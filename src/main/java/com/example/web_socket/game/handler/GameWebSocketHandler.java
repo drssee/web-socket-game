@@ -59,45 +59,59 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
         GameRequest gameRequest = objectMapper.readValue(payload, GameRequest.class);
 
         GameResponse response = new GameResponse();
+        String command = gameRequest.getCommand();
 
-        switch (gameRequest.getCommand()) {
+        switch (command) {
             case "ready":
-                boolean ready = gameService.ready(session.getId());
-                response.setStatus(ready ? GameStatus.SUCCESS : GameStatus.FAIL);
-                response.setMenu(GameMenu.READY);
+                boolean ready = gameService.setReady(session.getId()); // 준비
+                boolean isStart = gameService.isStart(); // 모든 세션이 준비 되었는지 확인
+
+                if (isStart) { // 모든 세션이 준비 되었으면 시작상태 리턴
+                    command = "isStart";
+                    response.setStatus(GameStatus.SUCCESS);
+                    response.setMenu(GameMenu.IS_START);
+                    gameService.changeTurn(); // 시작하면서 턴 부여
+
+                } else { // 그외의 경우 준비된 세션만 준비 상태 리턴
+                    response.setStatus(ready ? GameStatus.SUCCESS : GameStatus.FAIL);
+                    response.setMenu(GameMenu.READY);
+                }
+
                 break;
-            case "isStart":
-                boolean start = gameService.isStart();
-                response.setStatus(start ? GameStatus.SUCCESS : GameStatus.FAIL);
-                response.setMenu(GameMenu.IS_START);
-                break;
-            case "changeTurn":
-                gameService.changeTurn();
-                response.setStatus(GameStatus.SUCCESS);
-                response.setMenu(GameMenu.CHANGE_TURN);
-                break;
+
             case "roll":
-                int roll = gameService.roll(session.getId());
-                response.setStatus(1 <= roll && roll <= 6 ? GameStatus.SUCCESS : GameStatus.FAIL);
-                response.setMenu(GameMenu.ROLL);
-                break;
-            case "handle":
-                response = gameService.handle(session.getId(), gameRequest.getBoard().getId());
-                response.setStatus(GameStatus.SUCCESS);
-                response.setMenu(GameMenu.HANDLE);
-                break;
-            case "isGameOver":
-                gameService.isGameOver(session.getId(), gameRequest.getBoard().getId());
-                response.setStatus(GameStatus.SUCCESS);
-                response.setMenu(GameMenu.IS_GAME_OVER);
+                int roll = gameService.setRoll(session.getId());
+                // 주사위 숫자로 게임 프로세스 실행
+                int prevBoardNum = gameRequest.getBoard().getId();
+                response = gameService.process(session.getId(), prevBoardNum, roll);
+
+                // 프로세스 후 게임 오버일 경우
+                if (response.isGameOver()) {
+                    response.setStatus(GameStatus.SUCCESS);
+                    response.setMenu(GameMenu.IS_GAME_OVER);
+                } else {
+                    response.setStatus(GameStatus.SUCCESS);
+                    response.setMenu(GameMenu.PROCESS);
+                    gameService.changeTurn();
+                }
+
                 break;
         }
 
-        // 연결된 모든 사용자에게 실행된 내용 전달
-        for (WebSocketSession webSocketSession : sessions) {
-            if (webSocketSession.isOpen()) {
-                synchronized (webSocketSession) {
-                    if (webSocketSession.isOpen()) {
+        // 단일 세션 응답이 필요한 경우
+        if (command.equals("ready")) {
+            if (session.isOpen()) {
+                synchronized (session) {
+                    response.setPlayer(gameService.getPlayer(session.getId()));
+                    session.sendMessage(new TextMessage(objectMapper.writeValueAsString(response)));
+                }
+            }
+        }
+        // 연결된 모든 사용자에게 실행된 내용 전달이 필요한 경우
+        else {
+            for (WebSocketSession webSocketSession : sessions) {
+                if (webSocketSession.isOpen()) {
+                    synchronized (webSocketSession) {
                         // 응답에 각 세션에 해당하는 플레이어 주입해줌
                         response.setPlayer(gameService.getPlayer(webSocketSession.getId()));
                         webSocketSession.sendMessage(new TextMessage(objectMapper.writeValueAsString(response)));
@@ -105,6 +119,7 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
                 }
             }
         }
+
     }
 
     @Override

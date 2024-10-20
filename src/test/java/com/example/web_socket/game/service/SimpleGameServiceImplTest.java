@@ -62,10 +62,10 @@ class SimpleGameServiceImplTest {
     }
 
     @Test
-    void roll() {
+    void setRoll() {
         boolean res = false;
         for (int i=0; i<10000; i++) {
-            int roll = gameService.roll(players.get(0).getId());
+            int roll = gameService.setRoll(players.get(0).getId());
             if (!(1 <= roll && roll <= 6)) res = true;
         }
 
@@ -106,7 +106,7 @@ class SimpleGameServiceImplTest {
 
     @Test
     @DisplayName("플레이어가 소유주 일때(미구현)")
-    void handle() {
+    void process() {
         //given
 
         //when
@@ -116,7 +116,7 @@ class SimpleGameServiceImplTest {
 
     @Test
     @DisplayName("플레이어가 소유주가 아닐때 + 비어있는 땅일 경우(미구현)")
-    void handle1() {
+    void process1() {
         //given
 
         //when
@@ -126,7 +126,7 @@ class SimpleGameServiceImplTest {
 
     @Test
     @DisplayName("플레이어가 소유주가 아닐때 + 주인이 있는 땅일 경우 + gameover")
-    void handle2() {
+    void process2() {
         //given
         Player p1 = gameService.getPlayer(players.get(0).getId());
         int prevMoney = p1.getMoney();
@@ -136,16 +136,17 @@ class SimpleGameServiceImplTest {
         b.setOwner(p2);
 
         //when
-        GameResponse response = gameService.handle(p1.getId(), b.getId());
+        GameResponse response = gameService.process(p1.getId(), b.getId(), gameService.setRoll(p1.getId()));
 
         //then
-        assertThat(response.getPlayer().isGameOver()).isTrue();
+        assertThat(response.isGameOver()).isTrue();
+        assertThat(response.getGameOverId()).isEqualTo(p1.getId());
         assertThat(p1.getMoney()).isEqualTo(prevMoney - b.getPrice());
     }
 
     @Test
     @DisplayName("플레이어가 소유주가 아닐때 + 주인이 있는 땅일 경우 + 값 지불")
-    void handle3() {
+    void process3() {
         //given
         Player p1 = gameService.getPlayer(players.get(0).getId());
         Player p2 = gameService.getPlayer(players.get(1).getId());
@@ -154,10 +155,11 @@ class SimpleGameServiceImplTest {
         b.setOwner(p2);
 
         //when
-        GameResponse response = gameService.handle(p1.getId(), b.getId());
+        GameResponse response = gameService.process(p1.getId(), b.getId(), gameService.setRoll(p1.getId()));
 
         //then
-        assertThat(response.getPlayer().isGameOver()).isFalse();
+        assertThat(response.isGameOver()).isFalse();
+        assertThat(response.getGameOverId()).isNull();
         assertThat(p1.getMoney()).isEqualTo(1000);
     }
 
@@ -165,8 +167,8 @@ class SimpleGameServiceImplTest {
     void isStartTrue() {
         // given
         // 2명의 플레이어가 존재함
-        gameService.ready("session1");
-        gameService.ready("session2");
+        gameService.setReady("session1");
+        gameService.setReady("session2");
 
         // when
         boolean res = gameService.isStart();
@@ -182,9 +184,9 @@ class SimpleGameServiceImplTest {
         gameService.addPlayer("session3");
         players.add(gameService.getPlayer("session3"));
 
-        gameService.ready("session1");
-        gameService.ready("session2");
-        gameService.ready("session3");
+        gameService.setReady("session1");
+        gameService.setReady("session2");
+        gameService.setReady("session3");
 
         // when
         boolean res = gameService.isStart();

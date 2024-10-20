@@ -13,10 +13,10 @@ public interface GameService {
     void initBoard(int boardSize);
     Player getPlayer(String playerId);
     Board getBoard(int boardNum);
-    boolean ready(String playerId);
+    boolean setReady(String playerId);
 
-    int roll(String playerId);
-    GameResponse handle(String playerId, int boardNum);
+    int setRoll(String playerId);
+    GameResponse process(String playerId, int prevBoardNum, int roll);
     boolean isGameOver(String playerId, int boardNum);
     boolean buy(String playerId, int boardNum);
     boolean isStart();

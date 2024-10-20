@@ -5,7 +5,6 @@ public class Player {
     private String id;
     private int gubun;
     private int money;
-    private boolean gameOver;
     private boolean ready;
     private boolean turn;
     private int roll;
@@ -32,14 +31,6 @@ public class Player {
 
     public void setMoney(int money) {
         this.money = money;
-    }
-
-    public boolean isGameOver() {
-        return gameOver;
-    }
-
-    public void setGameOver(boolean gameOver) {
-        this.gameOver = gameOver;
     }
 
     public boolean isReady() {

@@ -1,5 +1,5 @@
 let ws;
-let dice = 0;
+let curBoardNum = 1;
 const tag = {
     player1Piece: document.createElement('div'),
     player2Piece: document.createElement('div'),
@@ -33,6 +33,7 @@ function connect() {
 
     ws.onmessage = function (e) {
         const res = JSON.parse(e.data);
+        console.log('onMessageHandler called with menu:', res.menu);
         player = res.player;
         onMessageHandler(res, player);
     };
@@ -48,7 +49,7 @@ function onMessageHandler(res, player) {
     const status = res.status;
 
     switch (menu) {
-        case 'INIT': // 초기화된 세션에게 별도의 응답 메시지를 전달함
+        case 'INIT':
             if (status === 'SUCCESS') {
                 player.id = res.player.id;
                 console.log('init success');
@@ -62,9 +63,12 @@ function onMessageHandler(res, player) {
             }
             break;
         case 'READY':
-            if (status === 'SUCCESS' && player.ready) {
+            if (status === 'SUCCESS') {
                 console.log('ready success');
-                isStart();
+                tag.readyButton.innerText = '준비중';
+
+            } else if (status === 'FAIL') {
+                console.log('ready fail');
 
             } else if (status === 'ERROR') {
                 console.error('ready error')
@@ -73,49 +77,15 @@ function onMessageHandler(res, player) {
         case 'IS_START':
             if (status === 'SUCCESS') {
                 tag.readyButton.innerText = '진행중';
-                changeTurn();
-            }
-            // 실패인데 레디한 사람한텐 alert 줘야함
-            else if (status === 'FAIL' && player.ready) {
-                tag.readyButton.innerText = '준비중';
-                if (player.ready) {
-                    alert('ready 1/2');
-                }
-            }
 
-            else if (status === 'ERROR') {
+            } else if (status === 'FAIL') {
+                console.log('is_start fail');
+
+            } else if (status === 'ERROR') {
                 console.error('is_start error');
             }
             break;
-        case 'CHANGE_TURN':
-            // 1. 체인지턴 호출
-            // 2. 임의 플레이어 1명에게 턴 배분
-            // 3. 턴 배분받음 플레이어와, 받지 못한 플레이어의 턴 상태값이 반대여야함
-            if (status === 'SUCCESS' && player.turn) {
-                console.log(player.id + "`s turn - true");
-
-            } else if (status === 'SUCCESS' && !player.turn) {
-                console.log(player.id + "`s turn - false");
-
-            } else if (status === 'FAIL') {
-                console.log('change_turn fail');
-
-            } else if (status === 'ERROR') {
-                console.error('change_turn error');
-            }
-            break;
-        case 'ROLL':
-            // dice에 주사위 값 주입하고 render 구현
-            if (status === 'SUCCESS') {
-                dice = player.roll;
-                console.log('roll success - ' + dice);
-                //handle();
-                changeTurn();
-            } else {
-                console.log('roll fail');
-            }
-            break;
-        case 'HANDLE':
+        case 'PROCESS':
             console.log('h')
             break;
         case 'IS_GAME_OVER':
@@ -134,10 +104,21 @@ function render(res, player) {
     tag.playerMoney.innerText = player.money
     // 주사위 값 지정
     tag.diceResult = player.roll;
-    // 플레이어 말 이동
-    // 응답에서 플레이어가 소속된 boardList와, Player객체에 현재 위치 저장하여 전달?
 
-    // 턴에 따라 버튼 disable 처리
+    // 준비, 턴에 따라 버튼 disable 처리
+    if (player.ready) {
+        tag.readyButton.disabled = true;
+    } else if (!player.ready) {
+        tag.readyButton.disabled = false;
+    }
+    if (player.turn) {
+        tag.diceButton.disabled = false;
+    } else if (!player.turn) {
+        tag.diceButton.disabled = true;
+    }
+
+    // 플레이어 말 이동 + 보드 최신화
+    // 넘어온 boards 루프 돌려서 현재 사용자들의 위치에 말 옮기기
 }
 
 function validateWs() {
@@ -152,34 +133,19 @@ function ready() {
     ws.send(JSON.stringify(ready));
 }
 
-function isStart() {
-    if (!validateWs()) return;
-    const isStart = {
-        command: 'isStart'
-    }
-    ws.send(JSON.stringify(isStart));
-}
-
 function roll() {
     if (!validateWs()) return;
     const roll = {
-        command: 'roll'
+        command: 'roll',
+        board: {
+            id: curBoardNum
+        }
     }
     ws.send(JSON.stringify(roll));
-}
-
-function changeTurn() {
-    if (!validateWs()) return;
-    const changeTurn = {
-        command: 'changeTurn'
-    }
-    ws.send(JSON.stringify(changeTurn));
 }
 
 export default {
     connect,
     ready,
-    isStart,
-    roll,
-    changeTurn
+    roll
 }
