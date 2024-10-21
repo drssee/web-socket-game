@@ -103,8 +103,6 @@ public class SimpleGameServiceImpl implements GameService {
         );
         validate(nextBoard);
 
-        // TODO 1. 테스트 코드 수정(이전 위치, 새로운 위치 추가됨 + 응답에 boards 추가됨)
-        // TODO 2. roll+render 와 연계하여 테스트 해야함
         // 이전 board 에서 플레이어 제거 + 새로운 board 에 플레이어 추가
         prevBoard.getOnPlayers().remove(player);
         nextBoard.getOnPlayers().add(player);

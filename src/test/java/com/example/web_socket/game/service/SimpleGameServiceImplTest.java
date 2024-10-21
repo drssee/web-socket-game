@@ -131,17 +131,25 @@ class SimpleGameServiceImplTest {
         Player p1 = gameService.getPlayer(players.get(0).getId());
         int prevMoney = p1.getMoney();
         Player p2 = gameService.getPlayer(players.get(1).getId());
-        Board b = gameService.getBoard(2);
-        b.setPrice(p1.getMoney() + 1000);
-        b.setOwner(p2);
+
+        Board currentB = gameService.getBoard(2);
+        currentB.getOnPlayers().add(p1); // p1 을 currentB에 위치시킴
+
+        int roll = gameService.setRoll(p1.getId());
+        Board newB = gameService.getBoard(currentB.getId() + roll);
+        newB.setPrice(p1.getMoney() + 1000);
+        newB.setOwner(p2);
 
         //when
-        GameResponse response = gameService.process(p1.getId(), b.getId(), gameService.setRoll(p1.getId()));
+        GameResponse response = gameService.process(p1.getId(), currentB.getId(), roll);
 
         //then
         assertThat(response.isGameOver()).isTrue();
         assertThat(response.getGameOverId()).isEqualTo(p1.getId());
-        assertThat(p1.getMoney()).isEqualTo(prevMoney - b.getPrice());
+        assertThat(p1.getMoney()).isEqualTo(prevMoney - newB.getPrice());
+        // 이전위치에서 플레이어가 제거 되고, 새로운 위치에 플레이어가 추가되어야함
+        assertThat(currentB.getOnPlayers().contains(p1)).isFalse();
+        assertThat(newB.getOnPlayers().contains(p1)).isTrue();
     }
 
     @Test
@@ -150,17 +158,25 @@ class SimpleGameServiceImplTest {
         //given
         Player p1 = gameService.getPlayer(players.get(0).getId());
         Player p2 = gameService.getPlayer(players.get(1).getId());
-        Board b = gameService.getBoard(2);
-        b.setPrice(p1.getMoney() - 1000);
-        b.setOwner(p2);
+
+        Board currentB = gameService.getBoard(2);
+        currentB.getOnPlayers().add(p1);
+
+        int roll = gameService.setRoll(p1.getId());
+        Board newB = gameService.getBoard(currentB.getId() + roll);
+        newB.setPrice(p1.getMoney() - 1000);
+        newB.setOwner(p2);
 
         //when
-        GameResponse response = gameService.process(p1.getId(), b.getId(), gameService.setRoll(p1.getId()));
+        GameResponse response = gameService.process(p1.getId(), currentB.getId(), roll);
 
         //then
         assertThat(response.isGameOver()).isFalse();
         assertThat(response.getGameOverId()).isNull();
         assertThat(p1.getMoney()).isEqualTo(1000);
+        // 이전위치에서 플레이어가 제거 되고, 새로운 위치에 플레이어가 추가되어야함
+        assertThat(currentB.getOnPlayers().contains(p1)).isFalse();
+        assertThat(newB.getOnPlayers().contains(p1)).isTrue();
     }
 
     @Test
