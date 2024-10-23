@@ -55,6 +55,9 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
 
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
+        if (sessions.size() != 2) {
+            throw new RuntimeException("need 2");
+        }
         String payload = message.getPayload();
         GameRequest gameRequest = objectMapper.readValue(payload, GameRequest.class);
 

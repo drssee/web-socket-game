@@ -73,6 +73,14 @@ body {
     right: 5px;
 }
 
+.player1-board {
+    background-color: powderblue;
+}
+
+.player2-board {
+    background-color: palevioletred;
+}
+
 .game-info {
     display: flex;
     flex-direction: column;

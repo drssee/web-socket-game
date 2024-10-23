@@ -1,6 +1,8 @@
 let ws;
 let playerBoardNum = 1;
 let enemyBoardNum = 1;
+const playerBoards = [];
+const enemyBoards = [];
 const tag = {
     player1Piece: document.createElement('div'), // 플레이어1 말
     player2Piece: document.createElement('div'), // 플레이어2 말
@@ -76,7 +78,15 @@ function onMessageHandler(res, player) {
                     } else {
                         enemyBoardNum = Number(b.id);
                     }
-                })
+                });
+
+                if (b.owner) {
+                    if (b.owner.id == res.player.id && !playerBoards.includes(b.id)) {
+                        playerBoards.push(b.id);
+                    } else if (b.owner.id != res.player.id && !enemyBoards.includes(b.id)) {
+                        enemyBoards.push(b.id);
+                    }
+                }
             });
 
             break;
@@ -127,6 +137,12 @@ function render(res, player) {
     // 플레이어 말 이동 + 보드 최신화
     document.getElementById('cell' + playerBoardNum).appendChild(tag.player1Piece);
     document.getElementById('cell' + enemyBoardNum).appendChild(tag.player2Piece);
+    playerBoards.forEach(e => {
+       document.getElementById('cell' + e).classList.add('player1-board');
+    });
+    enemyBoards.forEach(e => {
+        document.getElementById('cell' + e).classList.add('player2-board');
+    });
 }
 
 function validateWs() {

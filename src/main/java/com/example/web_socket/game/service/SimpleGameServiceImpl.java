@@ -119,15 +119,23 @@ public class SimpleGameServiceImpl implements GameService {
 
             // TODO 추가 기능 필요할 경우 추가
         }
+        // 시작점일 경우
+        else if (nextBoard.getId() == START) {
+            // TODO 추가 기능 필요할 경우 추가
 
+        }
         // 플레이어가 소유주가 아닐때
         else {
-            // 주인이 없는 땅이면
+            // 주인이 없는 땅이면서
             if (nextBoard.getOwner() == null) {
-                // TODO 웹소켓과 연계해서 구매 선택여부 알아야함 + 테스트 구현
-                // 전처리 -> 구매여부확인 -> 후처리 하면 가능할듯?
-                // 일단은 도착해서 돈이 있으면 무조건 구매하도록?
-                
+                // TODO 전처리 -> 구매여부확인 -> 후처리 구매 여부 확인 로직 추가 필요
+
+                // 일단은 도착해서 돈이 있으면 무조건 구매하도록
+                if (player.getMoney() >= nextBoard.getPrice()) {
+                    player.setMoney(player.getMoney() - nextBoard.getPrice());
+                    nextBoard.setOwner(player);
+                }
+
             }
             // 주인이 있는 땅이면
             else {
@@ -136,6 +144,12 @@ public class SimpleGameServiceImpl implements GameService {
                     gameResponse.setGameOverId(playerId);
                 }
                 player.setMoney(player.getMoney() - nextBoard.getPrice());
+                for (Player p : players.values()) {
+                    // enemy 플레이어에게 차감된 만큼 지불
+                    if (!p.getId().equals(player.getId())) {
+                        p.setMoney(p.getMoney() + nextBoard.getPrice());
+                    }
+                }
                 gameResponse.setPlayer(player);
             }
         }

@@ -115,13 +115,37 @@ class SimpleGameServiceImplTest {
     }
 
     @Test
-    @DisplayName("플레이어가 소유주가 아닐때 + 비어있는 땅일 경우(미구현)")
+    @DisplayName("플레이어가 소유주가 아닐때 + 비어있는 땅일 경우(강제 구입 버전)")
     void process1() {
         //given
+        Player p1 = gameService.getPlayer(players.get(0).getId());
+        int prevMoney = p1.getMoney();
+        Player p2 = gameService.getPlayer(players.get(1).getId());
+        int prevMoney2 = p2.getMoney();
+
+        Board currentB = gameService.getBoard(2);
+        currentB.getOnPlayers().add(p1); // p1 을 currentB에 위치시킴
+
+        int roll = gameService.setRoll(p1.getId());
+        Board newB = gameService.getBoard(currentB.getId() + roll);
+        newB.setPrice(p1.getMoney() - 1000);
+        newB.setOwner(p2);
+
+        //p1의 돈은 1000이어야하고
+        //p2의 돈은 prevMoney2 + (prevMoney1-1000)
 
         //when
+        GameResponse response = gameService.process(p1.getId(), currentB.getId(), roll);
 
         //then
+        assertThat(response.isGameOver()).isFalse();
+        assertThat(response.getGameOverId()).isEqualTo(null);
+        assertThat(p1.getMoney()).isEqualTo(prevMoney - newB.getPrice());
+        // 이전위치에서 플레이어가 제거 되고, 새로운 위치에 플레이어가 추가되어야함
+        assertThat(currentB.getOnPlayers().contains(p1)).isFalse();
+        assertThat(newB.getOnPlayers().contains(p1)).isTrue();
+        // p1에서 차감된 만큼 p2에 지불되어야함
+        assertThat(p2.getMoney()).isEqualTo(Math.abs(prevMoney2 + (prevMoney-1000)));
     }
 
     @Test
@@ -131,6 +155,7 @@ class SimpleGameServiceImplTest {
         Player p1 = gameService.getPlayer(players.get(0).getId());
         int prevMoney = p1.getMoney();
         Player p2 = gameService.getPlayer(players.get(1).getId());
+        int prevMoney2 = p2.getMoney();
 
         Board currentB = gameService.getBoard(2);
         currentB.getOnPlayers().add(p1); // p1 을 currentB에 위치시킴
@@ -150,6 +175,8 @@ class SimpleGameServiceImplTest {
         // 이전위치에서 플레이어가 제거 되고, 새로운 위치에 플레이어가 추가되어야함
         assertThat(currentB.getOnPlayers().contains(p1)).isFalse();
         assertThat(newB.getOnPlayers().contains(p1)).isTrue();
+        // p1에서 차감된 만큼 p2에 지불되어야함
+        assertThat(p2.getMoney()).isEqualTo(prevMoney2 + (prevMoney+1000));
     }
 
     @Test
