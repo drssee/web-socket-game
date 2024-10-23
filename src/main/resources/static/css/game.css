@@ -50,6 +50,10 @@ body {
     margin-bottom: 20px;
 }
 
+#player-id {
+    color: blue;
+}
+
 .player1-piece, .player2-piece {
     width: 20px;
     height: 20px;
@@ -58,13 +62,13 @@ body {
 }
 
 .player1-piece {
-    background-color: red;
+    background-color: blue;
     top: 5px;
     left: 5px;
 }
 
 .player2-piece {
-    background-color: blue;
+    background-color: red;
     bottom: 5px;
     right: 5px;
 }

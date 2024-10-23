@@ -80,12 +80,12 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
                 break;
 
             case "roll":
-                int roll = gameService.setRoll(session.getId());
                 // 주사위 숫자로 게임 프로세스 실행
-                int prevBoardNum = gameRequest.getBoard().getId();
-                response = gameService.process(session.getId(), prevBoardNum, roll);
+                int roll = gameService.setRoll(session.getId());
+                int curBoardNum = gameRequest.getBoard().getId();
+                response = gameService.process(session.getId(), curBoardNum, roll);
 
-                // 프로세스 후 게임 오버일 경우
+                // 프로세스 후 게임오버일 경우
                 if (response.isGameOver()) {
                     response.setStatus(GameStatus.SUCCESS);
                     response.setMenu(GameMenu.IS_GAME_OVER);

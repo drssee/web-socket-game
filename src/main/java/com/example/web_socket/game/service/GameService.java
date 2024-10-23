@@ -16,7 +16,7 @@ public interface GameService {
     boolean setReady(String playerId);
 
     int setRoll(String playerId);
-    GameResponse process(String playerId, int prevBoardNum, int roll);
+    GameResponse process(String playerId, int curBoardNum, int roll);
     boolean isGameOver(String playerId, int boardNum);
     boolean buy(String playerId, int boardNum);
     boolean isStart();

@@ -62,19 +62,8 @@
     import game from './js/vanilaGame.js';
 
     window.onload = function () {
-        const player1Piece = document.createElement('div'); // 플레이어1 말
-        player1Piece.classList.add('player1-piece');
-        document.getElementById('cell1').appendChild(player1Piece);
-        const player2Piece = document.createElement('div'); // 플레이어2 말
-        player2Piece.classList.add('player2-piece');
-        document.getElementById('cell1').appendChild(player2Piece);
-
-        const readyButton = document.getElementById('ready-button');
-        const rollDiceButton = document.getElementById('roll-dice-button');
-
+        game.init();
         game.connect();
-        readyButton.addEventListener('click', game.ready);
-        rollDiceButton.addEventListener('click', game.roll);
     }
 </script>
 </body>

@@ -1,8 +1,9 @@
 let ws;
-let curBoardNum = 1;
+let playerBoardNum = 1;
+let enemyBoardNum = 1;
 const tag = {
-    player1Piece: document.createElement('div'),
-    player2Piece: document.createElement('div'),
+    player1Piece: document.createElement('div'), // 플레이어1 말
+    player2Piece: document.createElement('div'), // 플레이어2 말
     playerId: document.getElementById('player-id'),
     playerMoney: document.getElementById('player-money'),
     readyButton: document.getElementById('ready-button'),
@@ -23,6 +24,15 @@ function createPlayer() {
 
 }
 
+function init() {
+    tag.player1Piece.classList.add('player1-piece');
+    tag.player2Piece.classList.add('player2-piece');
+    document.getElementById('cell1').appendChild(tag.player1Piece);
+    document.getElementById('cell1').appendChild(tag.player2Piece);
+    tag.readyButton.addEventListener('click', ready);
+    tag.diceButton.addEventListener('click', roll);
+}
+
 function connect() {
     ws = new WebSocket('ws://localhost:8080/game');
     let player = createPlayer();
@@ -33,7 +43,6 @@ function connect() {
 
     ws.onmessage = function (e) {
         const res = JSON.parse(e.data);
-        console.log('onMessageHandler called with menu:', res.menu);
         player = res.player;
         onMessageHandler(res, player);
     };
@@ -48,52 +57,34 @@ function onMessageHandler(res, player) {
     const menu = res.menu;
     const status = res.status;
 
+    if (status === 'ERROR') {
+        // TODO res.message 를 이용하여 일괄처리 하도록 수정 필요
+        console.error(menu + ' ' + status);
+        alert(menu + ' ' + status);
+    } else {
+        console.log(menu + ' ' + status);
+    }
+
     switch (menu) {
-        case 'INIT':
-            if (status === 'SUCCESS') {
-                player.id = res.player.id;
-                console.log('init success');
-                console.log('id: ' + player.id);
-
-            } else if (status === 'FAIL') {
-                console.log('init fail');
-
-            } else if (status === 'ERROR') {
-                console.error('init error');
-            }
-            break;
-        case 'READY':
-            if (status === 'SUCCESS') {
-                console.log('ready success');
-                tag.readyButton.innerText = '준비중';
-
-            } else if (status === 'FAIL') {
-                console.log('ready fail');
-
-            } else if (status === 'ERROR') {
-                console.error('ready error')
-            }
-            break;
-        case 'IS_START':
-            if (status === 'SUCCESS') {
-                tag.readyButton.innerText = '진행중';
-
-            } else if (status === 'FAIL') {
-                console.log('is_start fail');
-
-            } else if (status === 'ERROR') {
-                console.error('is_start error');
-            }
-            break;
         case 'PROCESS':
-            console.log('h')
+            // boards 돌면서 자신과 상대 위치 업데이트
+            console.log(res);
+            Object.values(res.boards).forEach(b => {
+                Object.values(b.onPlayers).forEach(op => {
+                    if (op.id === player.id) {
+                        playerBoardNum = Number(b.id);
+                    } else {
+                        enemyBoardNum = Number(b.id);
+                    }
+                })
+            });
+
             break;
         case 'IS_GAME_OVER':
-            console.log('i2')
+            alert(res.gameOverId !== player.id ? '승리' : '패배');
             break;
     }
 
-    // 플레이어와 보드 값에 따라 화면을 그려야함
     render(res, player);
 }
 
@@ -103,7 +94,23 @@ function render(res, player) {
     // 플레이어 돈 지정
     tag.playerMoney.innerText = player.money
     // 주사위 값 지정
-    tag.diceResult = player.roll;
+    tag.diceResult.innerText = player.roll;
+
+    // 게임오버일 경우 모든 버튼 비활성화
+    if (res.gameOver) {
+        tag.readyButton.innerText = '종료';
+        tag.readyButton.disabled = true;
+        tag.diceButton.disabled = true;
+        return;
+    }
+
+    // 준비, 시작에 따라 버튼 수정
+    if (res.menu === 'READY' && res.status === 'SUCCESS') {
+        tag.readyButton.innerText = '준비중';
+    }
+    if (res.menu === 'IS_START' && res.status === 'SUCCESS') {
+        tag.readyButton.innerText = '진행중';
+    }
 
     // 준비, 턴에 따라 버튼 disable 처리
     if (player.ready) {
@@ -118,7 +125,8 @@ function render(res, player) {
     }
 
     // 플레이어 말 이동 + 보드 최신화
-    // 넘어온 boards 루프 돌려서 현재 사용자들의 위치에 말 옮기기
+    document.getElementById('cell' + playerBoardNum).appendChild(tag.player1Piece);
+    document.getElementById('cell' + enemyBoardNum).appendChild(tag.player2Piece);
 }
 
 function validateWs() {
@@ -138,14 +146,13 @@ function roll() {
     const roll = {
         command: 'roll',
         board: {
-            id: curBoardNum
+            id: playerBoardNum
         }
     }
     ws.send(JSON.stringify(roll));
 }
 
 export default {
-    connect,
-    ready,
-    roll
+    init,
+    connect
 }

@@ -62,6 +62,9 @@ public class SimpleGameServiceImpl implements GameService {
         player.setMoney(BASIC_MONEY);
         player.setGubun(gubun++);
         this.players.put(playerId, player);
+
+        // 보드에 플레이어 배치
+        boards.get(1).getOnPlayers().add(player);
     }
 
     @Override
@@ -92,19 +95,20 @@ public class SimpleGameServiceImpl implements GameService {
     }
 
     @Override
-    public GameResponse process(String playerId, int prevBoardNum, int roll) {
+    public GameResponse process(String playerId, int curBoardNum, int roll) {
         Player player = players.get(playerId);
-        Board prevBoard = boards.get(prevBoardNum);
-        validate(player, prevBoard);
+        Board curBoard = boards.get(curBoardNum);
+        validate(player, curBoard);
 
-        int rolledNum = prevBoardNum + roll;
+        // 주사위 값을 이용해 다음 보드 검증
+        int rolledNum = curBoardNum + roll;
         Board nextBoard = boards.get(
                 rolledNum > BASIC_BOARD_SIZE ? rolledNum - BASIC_BOARD_SIZE : rolledNum
         );
         validate(nextBoard);
 
         // 이전 board 에서 플레이어 제거 + 새로운 board 에 플레이어 추가
-        prevBoard.getOnPlayers().remove(player);
+        curBoard.getOnPlayers().remove(player);
         nextBoard.getOnPlayers().add(player);
 
         GameResponse gameResponse = new GameResponse();
@@ -121,6 +125,9 @@ public class SimpleGameServiceImpl implements GameService {
             // 주인이 없는 땅이면
             if (nextBoard.getOwner() == null) {
                 // TODO 웹소켓과 연계해서 구매 선택여부 알아야함 + 테스트 구현
+                // 전처리 -> 구매여부확인 -> 후처리 하면 가능할듯?
+                // 일단은 도착해서 돈이 있으면 무조건 구매하도록?
+                
             }
             // 주인이 있는 땅이면
             else {
