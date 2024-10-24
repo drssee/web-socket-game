@@ -1,6 +1,6 @@
 package com.example.web_socket.config;
 
-import com.example.web_socket.game.handler.GameWebSocketHandler;
+import com.example.web_socket.decorator.GameWebSocketHandlerDecorator;
 import com.example.web_socket.game.service.GameService;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;
@@ -19,7 +19,7 @@ public class WebSocketConfig implements WebSocketConfigurer {
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        registry.addHandler(new GameWebSocketHandler(gameService), "/game")
+        registry.addHandler(new GameWebSocketHandlerDecorator(gameService), "/game")
                 .setAllowedOrigins("*"); // CORS 설정
     }
 }

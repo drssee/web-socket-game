@@ -3,6 +3,11 @@ let playerBoardNum = 1;
 let enemyBoardNum = 1;
 const playerBoards = [];
 const enemyBoards = [];
+const closeStatus = {
+    NO_CLOSE_FRAME: 1006,
+    SERVER_ERROR: 1011
+}
+const defaultErrorMsg = '처리중 예외가 발생하였습니다.';
 const tag = {
     player1Piece: document.createElement('div'), // 플레이어1 말
     player2Piece: document.createElement('div'), // 플레이어2 말
@@ -51,6 +56,9 @@ function connect() {
 
     ws.onclose = function (e) {
         console.log(e);
+        if (e.code === closeStatus.NO_CLOSE_FRAME || e.code === closeStatus.SERVER_ERROR) {
+            alert(e.reason || defaultErrorMsg);
+        }
         console.log('Disconnected from server');
     }
 }
@@ -59,13 +67,7 @@ function onMessageHandler(res, player) {
     const menu = res.menu;
     const status = res.status;
 
-    if (status === 'ERROR') {
-        // TODO res.message 를 이용하여 일괄처리 하도록 수정 필요
-        console.error(menu + ' ' + status);
-        alert(menu + ' ' + status);
-    } else {
-        console.log(menu + ' ' + status);
-    }
+    console.log(menu + ' ' + status);
 
     switch (menu) {
         case 'PROCESS':

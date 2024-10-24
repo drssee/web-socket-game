@@ -22,6 +22,7 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
 
     private final GameService gameService;
     private final ObjectMapper objectMapper;
+    private final String ERROR_MSG = "처리중 예외가 발생했습니다.";
 
     public GameWebSocketHandler(GameService gameService) {
         this.gameService = gameService;
@@ -55,9 +56,6 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
 
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
-        if (sessions.size() != 2) {
-            throw new RuntimeException("need 2");
-        }
         String payload = message.getPayload();
         GameRequest gameRequest = objectMapper.readValue(payload, GameRequest.class);
 
@@ -122,13 +120,21 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
                 }
             }
         }
-
+        throw new RuntimeException("test");
     }
 
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
         System.out.println("status: " + status);
+        // 1006: 비정상적인 종료 (서버 또는 클라이언트의 오류로 인해 연결이 갑자기 끊어짐).
+        // 1011: 내부 서버 오류 (서버에서 처리 중 오류가 발생하여 연결을 종료함).
+        // status가 null 이 아닐때 1006,1011 이면 error 상태로 응답 리턴함
+        // 응답을 보내서 alert 창을 띄우고 이후 처리 로직 따라가면 될듯?
+        // 프론트에서 응답 분기 처리하면됨
+
+        //@EnableAspectJAutoProxy 넣고 aop 포인트컷을 afterConnectionClosed 에 적용해 status.reason 주입해보기?
         sessions.remove(session);
         gameService.removePlayer(session.getId());
     }
+
 }

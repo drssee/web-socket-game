@@ -21,7 +21,6 @@ public class SimpleGameServiceImpl implements GameService {
         this.initBoard(BASIC_BOARD_SIZE);
     }
 
-    // TODO 예외 모아서 따로 응답 하도록 처리해야함
     private void validate(Player player) {
         if (player == null) throw new RuntimeException("player is null");
     }
