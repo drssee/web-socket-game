@@ -1,10 +1,10 @@
-package com.example.web_socket.game.handler;
+package com.example.web_socket.v1.handler;
 
-import com.example.web_socket.game.domain.GameRequest;
-import com.example.web_socket.game.domain.GameResponse;
-import com.example.web_socket.game.domain.enums.GameMenu;
-import com.example.web_socket.game.domain.enums.GameStatus;
-import com.example.web_socket.game.service.GameService;
+import com.example.web_socket.domain.GameRequest;
+import com.example.web_socket.domain.GameResponse;
+import com.example.web_socket.domain.enums.GameMenu;
+import com.example.web_socket.domain.enums.GameStatus;
+import com.example.web_socket.service.GameService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
@@ -34,17 +34,18 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
         if (sessions.size() > 1) throw new RuntimeException("max 2");
         System.out.println("session established - " + session.getId());
-        initPlayer(session);
+        init(session);
     }
 
-    private void initPlayer(WebSocketSession session) {
-        // 초기화된 세션에게 별도의 응답 메시지를 전달함
+    // 초기화된 세션에게 별도의 응답 메시지를 전달함
+    private void init(WebSocketSession session) {
         sessions.add(session);
         gameService.addPlayer(session.getId());
         GameResponse response = new GameResponse();
         response.setMenu(GameMenu.INIT);
         response.setStatus(GameStatus.SUCCESS);
         response.setPlayer(gameService.getPlayer(session.getId()));
+        response.setBoards(gameService.getBoards());
         try {
             session.sendMessage(new TextMessage(objectMapper.writeValueAsString(response)));
         } catch (IOException e) {

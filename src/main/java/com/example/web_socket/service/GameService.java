@@ -1,8 +1,8 @@
-package com.example.web_socket.game.service;
+package com.example.web_socket.service;
 
-import com.example.web_socket.game.domain.Board;
-import com.example.web_socket.game.domain.GameResponse;
-import com.example.web_socket.game.domain.Player;
+import com.example.web_socket.domain.Board;
+import com.example.web_socket.domain.GameResponse;
+import com.example.web_socket.domain.Player;
 
 import java.util.Map;
 
@@ -12,6 +12,7 @@ public interface GameService {
     void removePlayer(String playerId);
     void initBoard(int boardSize);
     Player getPlayer(String playerId);
+    Map<Integer, Board> getBoards();
     Board getBoard(int boardNum);
     boolean setReady(String playerId);
 

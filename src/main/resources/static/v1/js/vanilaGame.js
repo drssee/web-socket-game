@@ -41,7 +41,7 @@ function init() {
 }
 
 function connect() {
-    ws = new WebSocket('ws://localhost:8080/game');
+    ws = new WebSocket('ws://localhost:8080/game/v1');
     let player = createPlayer();
 
     ws.onopen = function () {

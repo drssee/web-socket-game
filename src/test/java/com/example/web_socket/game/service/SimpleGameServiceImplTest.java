@@ -1,8 +1,9 @@
 package com.example.web_socket.game.service;
 
-import com.example.web_socket.game.domain.Board;
-import com.example.web_socket.game.domain.GameResponse;
-import com.example.web_socket.game.domain.Player;
+import com.example.web_socket.domain.Board;
+import com.example.web_socket.domain.GameResponse;
+import com.example.web_socket.domain.Player;
+import com.example.web_socket.service.SimpleGameServiceImpl;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

@@ -1,4 +1,4 @@
-package com.example.web_socket.game.domain;
+package com.example.web_socket.domain;
 
 import java.util.ArrayList;
 import java.util.List;

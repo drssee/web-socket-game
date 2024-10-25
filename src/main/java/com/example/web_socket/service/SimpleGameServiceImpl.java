@@ -1,8 +1,8 @@
-package com.example.web_socket.game.service;
+package com.example.web_socket.service;
 
-import com.example.web_socket.game.domain.Board;
-import com.example.web_socket.game.domain.GameResponse;
-import com.example.web_socket.game.domain.Player;
+import com.example.web_socket.domain.Board;
+import com.example.web_socket.domain.GameResponse;
+import com.example.web_socket.domain.Player;
 
 import java.util.*;
 
@@ -36,6 +36,11 @@ public class SimpleGameServiceImpl implements GameService {
     @Override
     public Player getPlayer(String playerId) {
         return players.get(playerId);
+    }
+
+    @Override
+    public Map<Integer, Board> getBoards() {
+        return boards;
     }
 
     @Override

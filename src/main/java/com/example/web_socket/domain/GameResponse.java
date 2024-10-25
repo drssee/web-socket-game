@@ -1,7 +1,7 @@
-package com.example.web_socket.game.domain;
+package com.example.web_socket.domain;
 
-import com.example.web_socket.game.domain.enums.GameMenu;
-import com.example.web_socket.game.domain.enums.GameStatus;
+import com.example.web_socket.domain.enums.GameMenu;
+import com.example.web_socket.domain.enums.GameStatus;
 
 import java.util.HashMap;
 import java.util.Map;
