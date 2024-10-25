@@ -9,11 +9,11 @@ import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry
 
 @Configuration
 @EnableWebSocket
-public class WebSocketConfig implements WebSocketConfigurer {
+public class WebSocketConfigV1 implements WebSocketConfigurer {
 
     private final GameService gameService;
 
-    public WebSocketConfig(GameService gameService) {
+    public WebSocketConfigV1(GameService gameService) {
         this.gameService = gameService;
     }
 

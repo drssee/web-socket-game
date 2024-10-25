@@ -35,9 +35,24 @@
 <script>
 import '../assets/css/game.css';
 
+import SockJS from 'sockjs-client'
+import { Client as StompClient } from '@stomp/stompjs'
+
 export default {
+    mounted() {
+        this.connect();
+    },
+
+    beforeDestroy() {
+        if (this.stompClient) {
+            this.stompClient.deactivate();
+        }
+    },
+
     data() {
         return {
+            stompClient: null,
+            // cells init 후 board 에서 받아오기?
             cells: [
                 { id: 5 }, { id: 6 }, { id: 7 }, { id: 8 }, { id: 9 },
                 { id: 4 }, { id: '' }, { id: '' }, { id: '' }, { id: 10 },
@@ -58,9 +73,41 @@ export default {
             diceResult: '-',
         };
     },
+
     methods: {
+        connect() {
+            this.stompClient = new StompClient({
+                webSocketFactory: () => new SockJS('http://localhost:8080/game/v2'),
+                reconnectDelay: 5000
+                // debug: (str) => console.log(str)
+            });
+
+            // 구독
+            this.stompClient.onConnect = (frame) => {
+                console.log('Connected: ' + frame);
+
+                this.stompClient.subscribe('/topic/test', (message) => {
+                    console.log('message: ' + message);
+                })
+            };
+
+            // 예외처리
+            this.stompClient.onStompError = (error) => {
+                console.error(error);
+            }
+
+            // 연결 시작
+            this.stompClient.activate();
+        },
+
+        // 컨트롤러 작성하여 기능 연결 후 data 맞춰서 수정하기
         readyGame() {
-            alert("게임 준비 완료!");
+            if (this.stompClient && this.stompClient.connected) {
+                this.stompClient.publish({
+                    destination: '/app/test',
+                    body: 'test'
+                });
+            }
         },
         rollDice() {
             const result = Math.floor(Math.random() * 6) + 1;
