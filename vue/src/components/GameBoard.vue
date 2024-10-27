@@ -4,8 +4,8 @@
         <div class="board">
             <div v-for="(cell, index) in cells" :key="index" :id="'cell' + cell.id" :class="cell.id !== '' ? 'cell' : ''">
                 <!-- 플레이어 1과 2 말 표시 -->
-                <div v-if="player1.position === cell.id" class="player-token player1"></div>
-                <div v-if="player2.position === cell.id" class="player-token player2"></div>
+                <div v-if="player.position === cell.id" class="player-token player1"></div>
+<!--                <div v-if="player2.position === cell.id" class="player-token player2"></div>-->
                 {{ cell.id }}
             </div>
         </div>
@@ -14,8 +14,8 @@
         <div class="game-info">
             <div class="player-info">
                 <div class="player">
-                    <h3>{{ player1.name }}</h3>
-                    <p>money: <span>{{ player1.money }}</span></p>
+                    <h3>{{ player.name }}</h3>
+                    <p>money: <span>{{ player.money }}</span></p>
                 </div>
             </div>
 
@@ -41,18 +41,20 @@ import { Client as StompClient } from '@stomp/stompjs'
 export default {
     mounted() {
         this.connect();
+        // 브라우저 종료 시 연결 해제
+        window.addEventListener('beforeunload', this.disconnect);
     },
 
     beforeDestroy() {
-        if (this.stompClient) {
-            this.stompClient.deactivate();
-        }
+        window.removeEventListener('beforeunload', this.disconnect);
     },
 
     data() {
+        // TODO 1. v1 프론트 변수 설정 참고하여 api 에 맞도록 수정
+        // TODO 2. ready 구현, roll 구현
+
         return {
             stompClient: null,
-            // cells init 후 board 에서 받아오기?
             cells: [
                 { id: 5 }, { id: 6 }, { id: 7 }, { id: 8 }, { id: 9 },
                 { id: 4 }, { id: '' }, { id: '' }, { id: '' }, { id: 10 },
@@ -60,14 +62,8 @@ export default {
                 { id: 2 }, { id: '' }, { id: '' }, { id: '' }, { id: 12 },
                 { id: 1 }, { id: 16 }, { id: 15 }, { id: 14 }, { id: 13 }
             ],
-            player1: {
-                name: "Player 1",
-                money: 1000,
-                position: 1 // 초기 위치를 id가 1인 셀로 설정
-            },
-            player2: {
-                name: "Player 2",
-                money: 1000,
+            player: {
+                id: '',
                 position: 1 // 초기 위치를 id가 1인 셀로 설정
             },
             diceResult: '-',
@@ -78,35 +74,59 @@ export default {
         connect() {
             this.stompClient = new StompClient({
                 webSocketFactory: () => new SockJS('http://localhost:8080/game/v2'),
-                reconnectDelay: 5000
-                // debug: (str) => console.log(str)
+                reconnectDelay: 5000,
+                debug: (str) => console.log(str)
             });
-
-            // 구독
             this.stompClient.onConnect = (frame) => {
-                console.log('Connected: ' + frame);
-
-                this.stompClient.subscribe('/topic/test', (message) => {
-                    console.log('message: ' + message);
-                })
+                console.log('Connected: ', frame);
+                this.publish('/app/init');
+                this.subscribe();
             };
-
-            // 예외처리
             this.stompClient.onStompError = (error) => {
                 console.error(error);
             }
-
-            // 연결 시작
             this.stompClient.activate();
         },
 
-        // 컨트롤러 작성하여 기능 연결 후 data 맞춰서 수정하기
+        disconnect(event) {
+            if (this.stompClient && this.stompClient.connected) {
+                this.publish('/app/disconnect', this.player.id);
+                this.stompClient.deactivate();
+            }
+            event.preventDefault();
+            event.returnValue = '';
+        },
+
+        publish(destination, body) {
+            if (body) {
+                this.stompClient.publish({
+                    destination: destination,
+                    body: body
+                });
+            } else {
+                this.stompClient.publish({
+                    destination: destination
+                });
+            }
+        },
+
+        subscribe() {
+            this.stompClient.subscribe('/user/queue/init', (message) => {
+                const gameResponse = JSON.parse(message.body);
+                console.log('Received message:', gameResponse);
+                this.player.id = gameResponse.player.id;
+                console.log('init player - ' + this.player.id);
+            });
+            this.stompClient.subscribe('/user/queue/disconnect', (message) => {
+                const gameResponse = JSON.parse(message.body);
+                console.log('Received message:', gameResponse);
+                console.log('disconnect player - ' + gameResponse.player.id);
+            });
+        },
+
         readyGame() {
             if (this.stompClient && this.stompClient.connected) {
-                this.stompClient.publish({
-                    destination: '/app/test',
-                    body: 'test'
-                });
+
             }
         },
         rollDice() {

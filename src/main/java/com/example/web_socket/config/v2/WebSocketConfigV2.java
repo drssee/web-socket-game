@@ -13,7 +13,7 @@ public class WebSocketConfigV2 implements WebSocketMessageBrokerConfigurer {
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
         //클라이언트의 구독 경로 등록
-        registry.enableSimpleBroker("/topic");
+        registry.enableSimpleBroker("/topic", "/queue");
         //클라이언트의 전송 경로
         registry.setApplicationDestinationPrefixes("/app");
     }

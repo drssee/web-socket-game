@@ -14,8 +14,8 @@ public class SimpleGameServiceImpl implements GameService {
     private final int BASIC_MONEY = 100000;
     private int gubun = 1;
 
-    private Map<String, Player> players = new HashMap<>();
-    private Map<Integer, Board> boards = new HashMap<>();
+    private Map<String, Player> players = Collections.synchronizedMap(new HashMap<>());
+    private Map<Integer, Board> boards = Collections.synchronizedMap(new HashMap<>());
 
     public SimpleGameServiceImpl() {
         this.initBoard(BASIC_BOARD_SIZE);
