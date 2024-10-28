@@ -4,8 +4,8 @@
         <div class="board">
             <div v-for="(cell, index) in cells" :key="index" :id="'cell' + cell.id" :class="cell.id !== '' ? 'cell' : ''">
                 <!-- 플레이어 1과 2 말 표시 -->
-                <div v-if="player.position === cell.id" class="player-token player1"></div>
-<!--                <div v-if="player2.position === cell.id" class="player-token player2"></div>-->
+                <div v-if="playerCellNum === cell.id" class="player-token player1"></div>
+                <div v-if="enemyCellNum === cell.id" class="player-token player2"></div>
                 {{ cell.id }}
             </div>
         </div>
@@ -14,14 +14,19 @@
         <div class="game-info">
             <div class="player-info">
                 <div class="player">
-                    <h3>{{ player.name }}</h3>
+                    <h3>{{ player.id }}</h3>
                     <p>money: <span>{{ player.money }}</span></p>
                 </div>
             </div>
 
             <div class="button-section">
-                <button @click="readyGame" class="btn">준비</button>
-                <button @click="rollDice" class="btn">주사위</button>
+                <button
+                    @click="ready"
+                    class="btn"
+                    :disabled="player.ready">
+                    {{ isStart ? '진행중' : player.ready ? '준비완료' : '준비' }}
+                </button>
+                <button @click="roll" class="btn" :disabled="!player.turn">주사위</button>
             </div>
 
             <!-- 주사위 결과 표시 -->
@@ -55,6 +60,7 @@ export default {
 
         return {
             stompClient: null,
+            // TODO 4의 배수 (16/4 + 1 = 5) 를 이용해 동적으로 cells 그리기
             cells: [
                 { id: 5 }, { id: 6 }, { id: 7 }, { id: 8 }, { id: 9 },
                 { id: 4 }, { id: '' }, { id: '' }, { id: '' }, { id: 10 },
@@ -62,9 +68,17 @@ export default {
                 { id: 2 }, { id: '' }, { id: '' }, { id: '' }, { id: 12 },
                 { id: 1 }, { id: 16 }, { id: 15 }, { id: 14 }, { id: 13 }
             ],
+            isStart: false,
+            playerCellNum: 1,
+            enemyCellNum: 1,
             player: {
                 id: '',
-                position: 1 // 초기 위치를 id가 1인 셀로 설정
+                gubun: '',
+                money: 0,
+                gameOver: false,
+                ready: false,
+                turn: false,
+                roll: 0,
             },
             diceResult: '-',
         };
@@ -74,18 +88,64 @@ export default {
         connect() {
             this.stompClient = new StompClient({
                 webSocketFactory: () => new SockJS('http://localhost:8080/game/v2'),
-                reconnectDelay: 5000,
+                reconnectDelay: 0,
                 debug: (str) => console.log(str)
             });
+
+            // 연결 후처리
             this.stompClient.onConnect = (frame) => {
                 console.log('Connected: ', frame);
+
+                // 초기화 실행
                 this.publish('/app/init');
-                this.subscribe();
+
+                // 구독
+                this.subscribeInit();
+                this.subscribeReady();
+                this.subscribeRoll();
+                this.subscribeDisconnect();
             };
             this.stompClient.onStompError = (error) => {
                 console.error(error);
             }
-            this.stompClient.activate();
+            if (!this.stompClient.active) {
+                this.stompClient.activate();
+            }
+        },
+
+        subscribeInit() {
+            this.stompClient.subscribe('/user/queue/init', (message) => {
+                const init = JSON.parse(message.body);
+                console.log('init player - ' + init.player.id);
+                this.player.id = init.player.id;
+            });
+        },
+
+        subscribeReady() {
+            // TODO 준비 성공하면 /app/isStart 호출하는 방법으로 수정하기
+            this.stompClient.subscribe('/user/queue/ready', (message) => {
+                const ready = JSON.parse(message.body);
+                console.log('ready player - ' + ready.player.id);
+                if (ready.menu === 'IS_START') {
+                    this.isStart = true;
+                }
+                if (ready.status === 'FAIL') {
+                    alert('ready fail');
+                    throw new Error('ready fail');
+                }
+                this.player.ready = ready.player.ready;
+            });
+        },
+
+        subscribeRoll() {
+
+        },
+
+        subscribeDisconnect() {
+            this.stompClient.subscribe('/user/queue/disconnect', (message) => {
+                const disconnect = JSON.parse(message.body);
+                console.log('disconnect player - ' + disconnect.player.id);
+            });
         },
 
         disconnect(event) {
@@ -110,26 +170,15 @@ export default {
             }
         },
 
-        subscribe() {
-            this.stompClient.subscribe('/user/queue/init', (message) => {
-                const gameResponse = JSON.parse(message.body);
-                console.log('Received message:', gameResponse);
-                this.player.id = gameResponse.player.id;
-                console.log('init player - ' + this.player.id);
-            });
-            this.stompClient.subscribe('/user/queue/disconnect', (message) => {
-                const gameResponse = JSON.parse(message.body);
-                console.log('Received message:', gameResponse);
-                console.log('disconnect player - ' + gameResponse.player.id);
-            });
-        },
+        ready() {
+            if (this.stompClient
+                && this.stompClient.connected
+                && this.player.id !== '') {
 
-        readyGame() {
-            if (this.stompClient && this.stompClient.connected) {
-
+                this.publish('/app/ready', this.player.id);
             }
         },
-        rollDice() {
+        roll() {
             const result = Math.floor(Math.random() * 6) + 1;
             this.diceResult = result;
         }
