@@ -21,12 +21,12 @@
 
             <div class="button-section">
                 <button
-                    @click="ready"
+                    @click="publishReady"
                     class="btn"
                     :disabled="player.ready">
                     {{ isStart ? '진행중' : player.ready ? '준비완료' : '준비' }}
                 </button>
-                <button @click="roll" class="btn" :disabled="!player.turn">주사위</button>
+                <button @click="publishRoll" class="btn" :disabled="!player.turn">주사위</button>
             </div>
 
             <!-- 주사위 결과 표시 -->
@@ -47,17 +47,14 @@ export default {
     mounted() {
         this.connect();
         // 브라우저 종료 시 연결 해제
-        window.addEventListener('beforeunload', this.disconnect);
+        window.addEventListener('beforeunload', this.publishDisconnect);
     },
 
     beforeDestroy() {
-        window.removeEventListener('beforeunload', this.disconnect);
+        window.removeEventListener('beforeunload', this.publishDisconnect);
     },
 
     data() {
-        // TODO 1. v1 프론트 변수 설정 참고하여 api 에 맞도록 수정
-        // TODO 2. ready 구현, roll 구현
-
         return {
             stompClient: null,
             // TODO 4의 배수 (16/4 + 1 = 5) 를 이용해 동적으로 cells 그리기
@@ -81,6 +78,7 @@ export default {
                 roll: 0,
             },
             diceResult: '-',
+            defaultErrorMsg: '처리중 오류가 발생하였습니다.'
         };
     },
 
@@ -102,6 +100,7 @@ export default {
                 // 구독
                 this.subscribeInit();
                 this.subscribeReady();
+                this.subscribeIsStart();
                 this.subscribeRoll();
                 this.subscribeDisconnect();
             };
@@ -117,23 +116,50 @@ export default {
             this.stompClient.subscribe('/user/queue/init', (message) => {
                 const init = JSON.parse(message.body);
                 console.log('init player - ' + init.player.id);
+
+                if (init.status !== 'SUCCESS') {
+                    alert(this.defaultErrorMsg);
+                    throw new Error('init error');
+                }
+
                 this.player.id = init.player.id;
+                this.stompClient.subscribe('/topic/test/' + this.player.id, (message) => {
+                    console.log('ping pong');
+                    console.log(message.body);
+                })
             });
         },
 
         subscribeReady() {
-            // TODO 준비 성공하면 /app/isStart 호출하는 방법으로 수정하기
             this.stompClient.subscribe('/user/queue/ready', (message) => {
                 const ready = JSON.parse(message.body);
                 console.log('ready player - ' + ready.player.id);
-                if (ready.menu === 'IS_START') {
-                    this.isStart = true;
+
+                if (ready.status !== 'SUCCESS') {
+                    alert(this.defaultErrorMsg);
+                    throw new Error('ready error');
                 }
-                if (ready.status === 'FAIL') {
-                    alert('ready fail');
-                    throw new Error('ready fail');
-                }
+
                 this.player.ready = ready.player.ready;
+                this.publishIsStart();
+            });
+        },
+
+        subscribeIsStart() {
+            this.stompClient.subscribe('/topic/isStart', (message) => {
+                const isStart = JSON.parse(message.body);
+                console.log('isStart - ' + isStart.status);
+
+                if (isStart.status === 'SUCCESS') {
+                    this.isStart = true;
+                } else if (isStart.status === 'FAIL') {
+                    this.isStart = false;
+                } else {
+                    alert(this.defaultErrorMsg);
+                    throw new Error('isStart error');
+                }
+
+                console.log(isStart);
             });
         },
 
@@ -145,19 +171,20 @@ export default {
             this.stompClient.subscribe('/user/queue/disconnect', (message) => {
                 const disconnect = JSON.parse(message.body);
                 console.log('disconnect player - ' + disconnect.player.id);
+
+                if (disconnect.status !== 'SUCCESS') {
+                    alert(this.defaultErrorMsg);
+                    throw new Error('disconnect error');
+                }
             });
         },
 
-        disconnect(event) {
-            if (this.stompClient && this.stompClient.connected) {
-                this.publish('/app/disconnect', this.player.id);
-                this.stompClient.deactivate();
-            }
-            event.preventDefault();
-            event.returnValue = '';
-        },
-
         publish(destination, body) {
+            if (!this.stompClient || !this.stompClient.connected) {
+                alert(this.defaultErrorMsg);
+                throw new Error('publish error');
+            }
+
             if (body) {
                 this.stompClient.publish({
                     destination: destination,
@@ -170,15 +197,34 @@ export default {
             }
         },
 
-        ready() {
-            if (this.stompClient
-                && this.stompClient.connected
-                && this.player.id !== '') {
 
-                this.publish('/app/ready', this.player.id);
+        publishDisconnect(event) {
+            alert('disconnect');
+            if (!this.player.id || this.player.id === '') {
+                alert(this.defaultErrorMsg);
+                throw new Error('player is not null');
             }
+
+            this.publish('/app/disconnect', this.player.id);
+            this.stompClient.deactivate();
+            event.preventDefault();
+            event.returnValue = '';
         },
-        roll() {
+
+        publishReady() {
+            if (!this.player.id || this.player.id === '') {
+                alert(this.defaultErrorMsg);
+                throw new Error('player is not null');
+            }
+
+            this.publish('/app/ready', this.player.id);
+        },
+
+        publishIsStart() {
+            this.publish('/app/isStart');
+        },
+
+        publishRoll() {
             const result = Math.floor(Math.random() * 6) + 1;
             this.diceResult = result;
         }

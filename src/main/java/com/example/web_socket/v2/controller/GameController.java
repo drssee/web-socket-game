@@ -6,9 +6,14 @@ import com.example.web_socket.domain.enums.GameMenu;
 import com.example.web_socket.domain.enums.GameStatus;
 import com.example.web_socket.service.GameService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.SendTo;
+import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.messaging.simp.annotation.SendToUser;
+import org.springframework.messaging.simp.user.SimpUser;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Controller;
 
 import java.util.Collections;
@@ -27,19 +32,38 @@ public class GameController {
         this.gameService = gameService;
     }
 
+    // 테스트용
+    @Autowired
+    private SimpMessagingTemplate messagingTemplate;
+
+    // TODO 실제 live 인 세션들만 유지하도록 1분마다 확인 하도록 구현
+    @Scheduled(fixedRate = 60000)
+    public void test() {
+        synchronized (sessions) {
+            System.out.println("test");
+            sessions.forEach(session -> {
+                System.out.println(session);
+                messagingTemplate.convertAndSend("/topic/test/" + session, "ping");
+            });
+        }
+    }
+
     // init
     @MessageMapping("/init")
     @SendToUser("/queue/init")
-    public GameResponse initGame() {
+    public GameResponse initGame(SimpMessageHeaderAccessor headerAccessor) {
 
         // 세션은 최대 2개까지, 그이상일 경우 초기화 후 예외 발생
         if (sessions.size() > 1) {
-            sessions.forEach(sessions::remove);
+            sessions.clear();
+            System.out.println("sessions clear - " + sessions.size());
             throw new RuntimeException("max 2, init session");
         }
 
         // 플레이어 초기화
-        String id = UUID.randomUUID().toString();
+//        String id = UUID.randomUUID().toString();
+        String id = headerAccessor.getSessionId();
+        System.out.println("init session id - " + id);
         sessions.add(id);
         System.out.println("sessions.size() = " + sessions.size());
         gameService.addPlayer(id);
@@ -67,30 +91,26 @@ public class GameController {
     @MessageMapping("/ready")
     @SendToUser("/queue/ready")
     public GameResponse ready(String id) {
-
         GameResponse gameResponse = new GameResponse();
         boolean ready = gameService.setReady(id); // 준비
-        boolean isStart = gameService.isStart(); // 모든 세션이 준비 되었는지 확인
+        gameResponse.setStatus(ready ? GameStatus.SUCCESS : GameStatus.FAIL);
+        gameResponse.setMenu(GameMenu.READY);
         gameResponse.setPlayer(gameService.getPlayer(id));
-
-        if (isStart) { // 모든 세션이 준비 되었으면 시작상태 리턴
-            gameResponse.setStatus(GameStatus.SUCCESS);
-            gameResponse.setMenu(GameMenu.IS_START);
-            gameService.changeTurn(); // 시작하면서 턴 부여
-            // isStart로 별도의 @SendTo를 모든 세션에 해주기
-
-        } else { // 그외의 경우 준비된 세션만 준비 상태 리턴
-            gameResponse.setStatus(ready ? GameStatus.SUCCESS : GameStatus.FAIL);
-            gameResponse.setMenu(GameMenu.READY);
-        }
         return gameResponse;
     }
 
     // isStart
     @MessageMapping("/isStart")
     @SendTo("/topic/isStart")
-    public boolean isStart() {
-        return gameService.isStart();
+    public GameResponse isStart() {
+        GameResponse gameResponse = new GameResponse();
+        boolean isStart = gameService.isStart();
+        gameResponse.setMenu(GameMenu.IS_START);
+        gameResponse.setStatus(
+                isStart ? GameStatus.SUCCESS : GameStatus.FAIL
+        );
+
+        return gameResponse;
     }
 
     // roll
