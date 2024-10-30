@@ -1,7 +1,7 @@
 package com.example.web_socket.v1.decorator;
 
-import com.example.web_socket.v1.handler.GameWebSocketHandler;
 import com.example.web_socket.service.GameService;
+import com.example.web_socket.v1.handler.GameWebSocketHandler;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;

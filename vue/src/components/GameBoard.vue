@@ -41,7 +41,7 @@
 import '../assets/css/game.css';
 
 import SockJS from 'sockjs-client'
-import { Client as StompClient } from '@stomp/stompjs'
+import {Client as StompClient} from '@stomp/stompjs'
 
 export default {
     mounted() {
@@ -103,6 +103,7 @@ export default {
                 this.subscribeIsStart();
                 this.subscribeRoll();
                 this.subscribeDisconnect();
+                this.subscribeError();
             };
             this.stompClient.onStompError = (error) => {
                 console.error(error);
@@ -123,11 +124,16 @@ export default {
                 }
 
                 this.player.id = init.player.id;
-                this.stompClient.subscribe('/topic/test/' + this.player.id, (message) => {
-                    console.log('ping pong');
-                    console.log(message.body);
-                })
+                this.subscribePing();
             });
+        },
+
+        subscribePing() {
+            this.stompClient.subscribe('/topic/ping/' + this.player.id, (message) => {
+                console.log('ping player - ' + message);
+
+                this.publish('/app/pong', this.player.id);
+            })
         },
 
         subscribeReady() {
@@ -164,7 +170,7 @@ export default {
         },
 
         subscribeRoll() {
-
+            // TODO roll 구현하기
         },
 
         subscribeDisconnect() {
@@ -176,6 +182,16 @@ export default {
                     alert(this.defaultErrorMsg);
                     throw new Error('disconnect error');
                 }
+            });
+        },
+
+        subscribeError() {
+            this.stompClient.subscribe('/user/queue/error', (message) => {
+                const msg = message.body || this.defaultErrorMsg;
+                alert(msg);
+                console.error(msg);
+
+                // TODO 예외 발생시 모든 버튼 비활성화
             });
         },
 
@@ -205,10 +221,13 @@ export default {
                 throw new Error('player is not null');
             }
 
+            if (event) {
+                event.preventDefault();
+                event.returnValue = '';
+            }
+
             this.publish('/app/disconnect', this.player.id);
             this.stompClient.deactivate();
-            event.preventDefault();
-            event.returnValue = '';
         },
 
         publishReady() {
