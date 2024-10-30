@@ -50,6 +50,7 @@ public class GameController {
             messagingTemplate.convertAndSend("/topic/ping/" + session, session);
         });
 
+        // 3초 뒤 세션 정리
         new Timer().schedule(new TimerTask() {
             @Override
             public void run() {
@@ -65,7 +66,6 @@ public class GameController {
         }, 3000);
     }
 
-    // pong
     @MessageMapping("/pong")
     public void receivePong(String session) {
         // 응답이 확인된 세션 제거
@@ -79,7 +79,6 @@ public class GameController {
         return e.getMessage();
     }
 
-    // init
     @MessageMapping("/init")
     @SendToUser("/queue/init")
     public GameResponse initGame(SimpMessageHeaderAccessor headerAccessor) {
@@ -107,7 +106,6 @@ public class GameController {
         return gameResponse;
     }
 
-    // disconnect
     @MessageMapping("/disconnect")
     @SendToUser("/queue/disconnect")
     public void disconnectGame(String id) {
@@ -116,7 +114,6 @@ public class GameController {
         gameService.removePlayer(id);
     }
 
-    // ready
     @MessageMapping("/ready")
     @SendToUser("/queue/ready")
     public GameResponse ready(String id) {
@@ -128,7 +125,6 @@ public class GameController {
         return gameResponse;
     }
 
-    // isStart
     @MessageMapping("/isStart")
     @SendTo("/topic/isStart")
     public GameResponse isStart() {
@@ -142,5 +138,10 @@ public class GameController {
         return gameResponse;
     }
 
-    // roll
+    @MessageMapping("/test")
+    public void test() {
+        for (String session : sessions) {
+            messagingTemplate.convertAndSend("/topic/test/" + session, session + " !!");
+        }
+    }
 }

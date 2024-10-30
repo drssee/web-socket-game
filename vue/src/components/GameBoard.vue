@@ -11,27 +11,31 @@
         </div>
 
         <!-- 플레이어 정보와 주사위 굴리기 -->
-        <div class="game-info">
-            <div class="player-info">
-                <div class="player">
-                    <h3>{{ player.id }}</h3>
-                    <p>money: <span>{{ player.money }}</span></p>
+        <div v-if="sectionView">
+            <div class="game-info">
+                <div class="player-info">
+                    <div class="player">
+                        <h3>{{ player.id }}</h3>
+                        <p>money: <span>{{ player.money }}</span></p>
+                    </div>
                 </div>
-            </div>
 
-            <div class="button-section">
-                <button
-                    @click="publishReady"
-                    class="btn"
-                    :disabled="player.ready">
-                    {{ isStart ? '진행중' : player.ready ? '준비완료' : '준비' }}
-                </button>
-                <button @click="publishRoll" class="btn" :disabled="!player.turn">주사위</button>
-            </div>
 
-            <!-- 주사위 결과 표시 -->
-            <div class="dice-section">
-                <p>roll: <span>{{ diceResult }}</span></p>
+                <div class="button-section">
+                    <button
+                        @click="publishReady"
+                        class="btn"
+                        :disabled="player.ready">
+                        {{ isStart ? '진행중' : player.ready ? '준비완료' : '준비' }}
+                    </button>
+                    <button @click="publishRoll" class="btn" :disabled="!player.turn">주사위</button>
+                </div>
+
+                <!-- 주사위 결과 표시 -->
+                <div class="dice-section">
+                    <p>roll: <span>{{ diceResult }}</span></p>
+                </div>
+
             </div>
         </div>
     </div>
@@ -57,6 +61,7 @@ export default {
     data() {
         return {
             stompClient: null,
+            sectionView: true,
             // TODO 4의 배수 (16/4 + 1 = 5) 를 이용해 동적으로 cells 그리기
             cells: [
                 { id: 5 }, { id: 6 }, { id: 7 }, { id: 8 }, { id: 9 },
@@ -124,7 +129,12 @@ export default {
                 }
 
                 this.player.id = init.player.id;
+
+                // 구독 경로에 player.id 가 필요한 경우 별도로 구독
                 this.subscribePing();
+                this.stompClient.subscribe('/topic/test/' + this.player.id, (message) => {
+                    alert(message.body);
+                })
             });
         },
 
@@ -158,19 +168,23 @@ export default {
 
                 if (isStart.status === 'SUCCESS') {
                     this.isStart = true;
+                    // changeTurn 호출
+                    this.publish('/app/test');
                 } else if (isStart.status === 'FAIL') {
                     this.isStart = false;
                 } else {
                     alert(this.defaultErrorMsg);
                     throw new Error('isStart error');
                 }
-
-                console.log(isStart);
             });
         },
 
         subscribeRoll() {
-            // TODO roll 구현하기
+            // TODO roll (메인로직) 구현하기
+            // 1. 모두 준비 후 시작되면, 턴 부여
+            // 2. 턴인 플레이어가 주사위를 굴리면, process 수행 후
+            // 3. 구독 url 에 url+각자의 세션 id 를 사용하여 결과를 리턴해줌
+            // 4. 각 결과에 맞게 dom 조작
         },
 
         subscribeDisconnect() {
@@ -191,7 +205,8 @@ export default {
                 alert(msg);
                 console.error(msg);
 
-                // TODO 예외 발생시 모든 버튼 비활성화
+                // 예외 발생시 모든 버튼 섹션 비활성화
+                this.sectionView = false;
             });
         },
 
