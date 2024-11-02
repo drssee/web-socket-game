@@ -22,4 +22,6 @@ public interface GameService {
     boolean buy(String playerId, int boardNum);
     boolean isStart();
     Map<String, Player> changeTurn();
+    int getPlayerCount();
+    void clearPlayers();
 }

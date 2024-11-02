@@ -1,6 +1,8 @@
 package com.example.web_socket.v2.controller;
 
+import com.example.web_socket.AbnormalTerminateException;
 import com.example.web_socket.domain.GameResponse;
+import com.example.web_socket.domain.Player;
 import com.example.web_socket.domain.enums.GameMenu;
 import com.example.web_socket.domain.enums.GameStatus;
 import com.example.web_socket.service.GameService;
@@ -8,7 +10,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.messaging.handler.annotation.MessageExceptionHandler;
 import org.springframework.messaging.handler.annotation.MessageMapping;
-import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.messaging.simp.annotation.SendToUser;
@@ -39,31 +40,62 @@ public class GameController {
     @Scheduled(fixedRate = 60000)
     public void checkSessions() {
         logger.info("checkSessions()");
-        logger.info("session.size() = {}", sessions.size());
+        logger.info("checkSessions() session.size() = {}", sessions.size());
+
+        // 세션개수와 플레이어수가 다르면서(비정상종료 된 경우), 게임이 시작되어 있는 경우 강제 종료시켜야함
+        if (sessions.size() != gameService.getPlayerCount()
+                && gameService.isStart()) {
+            abnormalTerminate();
+        }
 
         // pendingSessions 초기화
         pendingSessions.clear();
         pendingSessions.addAll(sessions);
 
+        // 각 세션에 ping 전송
         sessions.forEach(session -> {
             logger.info("session - {}", session);
             messagingTemplate.convertAndSend("/topic/ping/" + session, session);
         });
 
-        // 3초 뒤 세션 정리
+        // 3초 뒤 응답 보류중인 세션들 정리
         new Timer().schedule(new TimerTask() {
             @Override
             public void run() {
-                logger.info("pendingSession.size() = {}", pendingSessions.size());
-                pendingSessions.forEach(pendingSession -> {
-                    logger.info("pendingSession - {}", pendingSession);
-                    sessions.remove(pendingSession);
-                    logger.info("sessions.size() = {}", sessions.size());
-                    gameService.removePlayer(pendingSession);
-                });
-                pendingSessions.clear();
+                try {
+                    logger.info("pendingSession.size() = {}", pendingSessions.size());
+
+                    // 응답 보류중인 세션들 제거
+                    pendingSessions.forEach(pendingSession -> {
+                        logger.info("pendingSession - {}", pendingSession);
+                        sessions.remove(pendingSession);
+                        logger.info("sessions.size() = {}", sessions.size());
+                        gameService.removePlayer(pendingSession);
+                    });
+                } catch (RuntimeException e) {
+                    logger.error("checkSessions.run", e);
+                    throw new RuntimeException(e);
+                } finally {
+                    pendingSessions.clear();
+                }
             }
         }, 3000);
+    }
+
+    /**
+     * 비정상(진행중인 게임이 끝나기전, 플레이어의 세션 종료) 종료시
+     * 모든 세션과 플레이어 제거 후 예외 발생시킴
+     */
+    private void abnormalTerminate() {
+        try {
+            gameService.clearPlayers();
+            throw new AbnormalTerminateException("another player out");
+        } catch (AbnormalTerminateException e) {
+            logger.error("abnormalTerminate", e);
+            throw new AbnormalTerminateException(e.getMessage());
+        } finally {
+            sessions.clear();
+        }
     }
 
     @MessageMapping("/pong")
@@ -75,13 +107,19 @@ public class GameController {
     @MessageExceptionHandler
     @SendToUser("/queue/error")
     public String error(Exception e) {
-        logger.error(e);
+        logger.error(e.getMessage(), e);
+
+        if (e.getClass() == AbnormalTerminateException.class) {
+            messagingTemplate.convertAndSend("/topic/error", e.getMessage());
+        }
+
         return e.getMessage();
     }
 
     @MessageMapping("/init")
     @SendToUser("/queue/init")
     public GameResponse initGame(SimpMessageHeaderAccessor headerAccessor) {
+        logger.info("initGame() session.size() = {}", sessions.size());
 
         // 세션은 최대 2개까지, 그이상일 경우 예외 발생
         if (sessions.size() > 1) {
@@ -93,7 +131,6 @@ public class GameController {
         messagingTemplate.convertAndSendToUser(id, "/queue/test", "zz");
         logger.info("init session id - {}", id);
         sessions.add(id);
-        logger.info("session.size() = {}", sessions.size());
         gameService.addPlayer(id);
 
         // 응답 객체 생성
@@ -109,9 +146,16 @@ public class GameController {
     @MessageMapping("/disconnect")
     @SendToUser("/queue/disconnect")
     public void disconnectGame(String id) {
+        // 진행중인 게임인데 플레이어가 나갈 경우, 모든 세션 강제 종료 시켜야함
+        if (gameService.isStart()) {
+            abnormalTerminate();
+        }
+
+        // 세션과 플레이어 제거
         sessions.remove(id);
-        logger.info("session.size() = {}", sessions.size());
         gameService.removePlayer(id);
+
+        logger.info("disconnectGame() session.size() = {}", sessions.size());
     }
 
     @MessageMapping("/ready")
@@ -126,22 +170,24 @@ public class GameController {
     }
 
     @MessageMapping("/isStart")
-    @SendTo("/topic/isStart")
-    public GameResponse isStart() {
+    public void isStart() {
         GameResponse gameResponse = new GameResponse();
-        boolean isStart = gameService.isStart();
         gameResponse.setMenu(GameMenu.IS_START);
-        gameResponse.setStatus(
-                isStart ? GameStatus.SUCCESS : GameStatus.FAIL
-        );
 
-        return gameResponse;
-    }
+        boolean isStart = gameService.isStart();
+        if (isStart) {
+            // 모든 세션이 준비가 된 경우 changeTurn 호출하여 턴 부여
+            gameResponse.setStatus(GameStatus.SUCCESS);
+            gameService.changeTurn();
+        } else {
+            gameResponse.setStatus(GameStatus.FAIL);
+        }
 
-    @MessageMapping("/test")
-    public void test() {
+        // 각 세션에 각자의 플레이어 객체를 담아 리턴
         for (String session : sessions) {
-            messagingTemplate.convertAndSend("/topic/test/" + session, session + " !!");
+            Player player = gameService.getPlayer(session);
+            gameResponse.setPlayer(player);
+            messagingTemplate.convertAndSend("/topic/isStart/" + session, gameResponse);
         }
     }
 }

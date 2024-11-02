@@ -28,7 +28,12 @@
                         :disabled="player.ready">
                         {{ isStart ? '진행중' : player.ready ? '준비완료' : '준비' }}
                     </button>
-                    <button @click="publishRoll" class="btn" :disabled="!player.turn">주사위</button>
+                    <button
+                        @click="publishRoll"
+                        :class="player.turn && isStart ? 'btn' : 'disabledBtn'"
+                        :disabled="!(player.turn && isStart)">
+                        주사위
+                    </button>
                 </div>
 
                 <!-- 주사위 결과 표시 -->
@@ -75,9 +80,8 @@ export default {
             enemyCellNum: 1,
             player: {
                 id: '',
-                gubun: '',
+                gubun: 0,
                 money: 0,
-                gameOver: false,
                 ready: false,
                 turn: false,
                 roll: 0,
@@ -105,7 +109,6 @@ export default {
                 // 구독
                 this.subscribeInit();
                 this.subscribeReady();
-                this.subscribeIsStart();
                 this.subscribeRoll();
                 this.subscribeDisconnect();
                 this.subscribeError();
@@ -132,9 +135,8 @@ export default {
 
                 // 구독 경로에 player.id 가 필요한 경우 별도로 구독
                 this.subscribePing();
-                this.stompClient.subscribe('/topic/test/' + this.player.id, (message) => {
-                    alert(message.body);
-                })
+                this.subscribeIsStart();
+                this.subscribeRoll();
             });
         },
 
@@ -162,29 +164,25 @@ export default {
         },
 
         subscribeIsStart() {
-            this.stompClient.subscribe('/topic/isStart', (message) => {
+            this.stompClient.subscribe('/topic/isStart/' + this.player.id, (message) => {
                 const isStart = JSON.parse(message.body);
                 console.log('isStart - ' + isStart.status);
 
-                if (isStart.status === 'SUCCESS') {
-                    this.isStart = true;
-                    // changeTurn 호출
-                    this.publish('/app/test');
-                } else if (isStart.status === 'FAIL') {
-                    this.isStart = false;
-                } else {
+                if (isStart.status === 'ERROR') {
                     alert(this.defaultErrorMsg);
                     throw new Error('isStart error');
                 }
+
+                this.isStart = isStart.status === 'SUCCESS';
+                this.player = isStart.player;
             });
         },
 
         subscribeRoll() {
             // TODO roll (메인로직) 구현하기
-            // 1. 모두 준비 후 시작되면, 턴 부여
-            // 2. 턴인 플레이어가 주사위를 굴리면, process 수행 후
-            // 3. 구독 url 에 url+각자의 세션 id 를 사용하여 결과를 리턴해줌
-            // 4. 각 결과에 맞게 dom 조작
+            // 1. 턴인 플레이어가 주사위를 굴리면, process 수행 후
+            // 2. 구독 url 에 url+각자의 세션 id 를 사용하여 결과를 리턴해줌
+            // 3. 각 결과에 맞게 dom 조작
         },
 
         subscribeDisconnect() {
@@ -200,14 +198,16 @@ export default {
         },
 
         subscribeError() {
-            this.stompClient.subscribe('/user/queue/error', (message) => {
+            const handleError = (message) => {
                 const msg = message.body || this.defaultErrorMsg;
                 alert(msg);
                 console.error(msg);
-
-                // 예외 발생시 모든 버튼 섹션 비활성화
+                // 화면 조작 부분 안보이도록 수정
                 this.sectionView = false;
-            });
+            }
+
+            this.stompClient.subscribe('/user/queue/error', handleError);
+            this.stompClient.subscribe('/topic/error', handleError);
         },
 
         publish(destination, body) {
@@ -256,6 +256,10 @@ export default {
 
         publishIsStart() {
             this.publish('/app/isStart');
+        },
+
+        publishChangeTurn() {
+            this.publish('/app/changeTurn');
         },
 
         publishRoll() {

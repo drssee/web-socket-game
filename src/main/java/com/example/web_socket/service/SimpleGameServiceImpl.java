@@ -224,4 +224,14 @@ public class SimpleGameServiceImpl implements GameService {
         }
         return players;
     }
+
+    @Override
+    public int getPlayerCount() {
+        return this.players.size();
+    }
+
+    @Override
+    public void clearPlayers() {
+        this.players.clear();
+    }
 }
