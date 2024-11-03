@@ -2,7 +2,16 @@
     <div class="container">
         <!-- 게임판 -->
         <div class="board">
-            <div v-for="(cell, index) in cells" :key="index" :id="'cell' + cell.id" :class="cell.id !== '' ? 'cell' : ''">
+            <div
+                v-for="(cell, index) in cells"
+                :key="index"
+                :id="'cell' + cell.id"
+                :class="[
+                        cell.id !== '' ? 'cell' : '',
+                        playerBoards.includes(cell.id) ? 'player-board' : '',
+                        enemyBoards.includes(cell.id) ? 'enemy-board' : ''
+                    ]"
+                >
                 <!-- 플레이어 1과 2 말 표시 -->
                 <div v-if="playerCellNum === cell.id" class="player-token player1"></div>
                 <div v-if="enemyCellNum === cell.id" class="player-token player2"></div>
@@ -29,7 +38,7 @@
                         {{ isStart ? '진행중' : player.ready ? '준비완료' : '준비' }}
                     </button>
                     <button
-                        @click="publishRoll"
+                        @click="publishProcess"
                         :class="player.turn && isStart ? 'btn' : 'disabledBtn'"
                         :disabled="!(player.turn && isStart)">
                         주사위
@@ -78,6 +87,8 @@ export default {
             isStart: false,
             playerCellNum: 1,
             enemyCellNum: 1,
+            playerBoards: [],
+            enemyBoards: [],
             player: {
                 id: '',
                 gubun: 0,
@@ -109,7 +120,7 @@ export default {
                 // 구독
                 this.subscribeInit();
                 this.subscribeReady();
-                this.subscribeRoll();
+                this.subscribeProcess();
                 this.subscribeDisconnect();
                 this.subscribeError();
             };
@@ -136,7 +147,7 @@ export default {
                 // 구독 경로에 player.id 가 필요한 경우 별도로 구독
                 this.subscribePing();
                 this.subscribeIsStart();
-                this.subscribeRoll();
+                this.subscribeProcess();
             });
         },
 
@@ -178,11 +189,43 @@ export default {
             });
         },
 
-        subscribeRoll() {
-            // TODO roll (메인로직) 구현하기
-            // 1. 턴인 플레이어가 주사위를 굴리면, process 수행 후
-            // 2. 구독 url 에 url+각자의 세션 id 를 사용하여 결과를 리턴해줌
-            // 3. 각 결과에 맞게 dom 조작
+        subscribeProcess() {
+            this.stompClient.subscribe('/topic/process/' + this.player.id, (message) => {
+                const process = JSON.parse(message.body);
+                console.log('process - ' + process.status);
+
+                if (process.status === 'ERROR') {
+                    alert(this.defaultErrorMsg);
+                    throw new Error('process error');
+                }
+
+                if (process.menu === 'IS_GAME_OVER') {
+                    const msg = process.gameOverId === this.player.id ? 'defeat' : 'victory';
+                    alert(msg);
+                    this.sectionView = false;
+                } else if (process.menu === 'PROCESS') {
+                    this.player = process.player;
+
+                    // boards 순회하며 업데이트
+                    Object.values(process.boards).forEach(b => {
+                        Object.values(b.onPlayers).forEach(op => {
+                            if (op.id === this.player.id) {
+                                this.playerCellNum = Number(b.id);
+                            } else {
+                                this.enemyCellNum = Number(b.id);
+                            }
+                        });
+
+                        if (b.owner) {
+                            if (b.owner.id === this.player.id && !this.playerBoards.includes(b.id)) {
+                                this.playerBoards.push(b.id);
+                            } else if (b.owner.id !== this.player.id && !this.enemyBoards.includes(b.id)) {
+                                this.enemyBoards.push(b.id);
+                            }
+                        }
+                    })
+                }
+            })
         },
 
         subscribeDisconnect() {
@@ -258,13 +301,16 @@ export default {
             this.publish('/app/isStart');
         },
 
-        publishChangeTurn() {
-            this.publish('/app/changeTurn');
-        },
-
-        publishRoll() {
-            const result = Math.floor(Math.random() * 6) + 1;
-            this.diceResult = result;
+        publishProcess() {
+            const gameRequest = {
+                board: {
+                    id: this.playerCellNum
+                },
+                player: {
+                    id: this.player.id
+                }
+            }
+            this.publish('/app/process', JSON.stringify(gameRequest));
         }
     }
 };

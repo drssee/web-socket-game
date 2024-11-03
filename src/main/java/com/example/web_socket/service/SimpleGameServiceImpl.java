@@ -130,11 +130,11 @@ public class SimpleGameServiceImpl implements GameService {
         }
         // 플레이어가 소유주가 아닐때
         else {
-            // 주인이 없는 땅이면서
+            // 주인이 없는 땅이면
             if (nextBoard.getOwner() == null) {
                 // TODO 전처리 -> 구매여부확인 -> 후처리 구매 여부 확인 로직 추가 필요
 
-                // 일단은 도착해서 돈이 있으면 무조건 구매하도록
+                // 도착해서 돈이 있으면 무조건 구매하도록
                 if (player.getMoney() >= nextBoard.getPrice()) {
                     player.setMoney(player.getMoney() - nextBoard.getPrice());
                     nextBoard.setOwner(player);

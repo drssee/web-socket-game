@@ -1,6 +1,8 @@
 package com.example.web_socket.v2.controller;
 
 import com.example.web_socket.AbnormalTerminateException;
+import com.example.web_socket.domain.Board;
+import com.example.web_socket.domain.GameRequest;
 import com.example.web_socket.domain.GameResponse;
 import com.example.web_socket.domain.Player;
 import com.example.web_socket.domain.enums.GameMenu;
@@ -185,9 +187,34 @@ public class GameController {
 
         // 각 세션에 각자의 플레이어 객체를 담아 리턴
         for (String session : sessions) {
-            Player player = gameService.getPlayer(session);
-            gameResponse.setPlayer(player);
+            gameResponse.setPlayer(gameService.getPlayer(session));
             messagingTemplate.convertAndSend("/topic/isStart/" + session, gameResponse);
+        }
+    }
+
+    @MessageMapping("/process")
+    public void process(GameRequest gameRequest) {
+        Player player = gameService.getPlayer(gameRequest.getPlayer().getId());
+        Board board = gameService.getBoard(gameRequest.getBoard().getId());
+
+        // 주사위 숫자로 게임 프로세스 실행
+        int roll = gameService.setRoll(player.getId());
+        int curBoardNum = board.getId();
+        GameResponse response = gameService.process(player.getId(), curBoardNum, roll);
+        response.setStatus(GameStatus.SUCCESS);
+
+        // 프로세스 후 게임오버일 경우
+        if (response.isGameOver()) {
+            response.setMenu(GameMenu.IS_GAME_OVER);
+        } else {
+            response.setMenu(GameMenu.PROCESS);
+            gameService.changeTurn();
+        }
+
+        // 각 세션에 각자의 플레이어 객체를 담아 리턴
+        for (String session : sessions) {
+            response.setPlayer(gameService.getPlayer(session));
+            messagingTemplate.convertAndSend("/topic/process/" + session, response);
         }
     }
 }
